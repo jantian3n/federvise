@@ -8,6 +8,7 @@
  *   npm run publish --all        # 发布所有未发布的文章
  */
 
+import 'dotenv/config';
 import { publishPost, getUnpublishedPosts } from './services/publish.js';
 import { getAllPosts } from './services/markdown.js';
 
