@@ -4,15 +4,21 @@ A single-user ActivityPub-enabled blog. Write in Markdown, publish to the Fedive
 
 ## Features
 
-- Markdown-based content with frontmatter support
-- ActivityPub federation (compatible with Mastodon, Misskey, etc.)
-- RSS/JSON Feed
-- Dark mode support
-- Minimal dependencies
+- **Markdown-based content** with YAML frontmatter support
+- **ActivityPub federation** compatible with Mastodon, Misskey, Pleroma, etc.
+- **Web admin interface** for managing and publishing posts
+- **REST API** for programmatic access
+- **Obsidian plugin** for writing and publishing from Obsidian
+- **RSS/JSON Feed** for traditional subscribers
+- **Dark mode** following system preference
 
-## Setup
+## Quick Start
 
 ```bash
+# Clone the repository
+git clone https://github.com/jantian3n/federvise.git
+cd federvise
+
 # Install dependencies
 npm install
 
@@ -21,18 +27,21 @@ npm run db:init
 
 # Start development server
 npm run dev
+
+# Visit http://localhost:3000
 ```
 
 ## Configuration
 
-Set environment variables before starting:
+Create a `.env` file or set environment variables:
 
 ```bash
-export DOMAIN=yourdomain.com      # Your domain (required for federation)
-export USERNAME=blog              # ActivityPub username
-export DISPLAY_NAME="My Blog"     # Display name
-export SUMMARY="A personal blog"  # Bio/description
-export PORT=3000                  # Server port (default: 3000)
+DOMAIN=yourdomain.com           # Your domain (required)
+USERNAME=blog                    # ActivityPub username
+DISPLAY_NAME="My Blog"           # Display name
+SUMMARY="A personal blog"        # Bio/description
+ADMIN_PASSWORD=your-secret       # Password for admin and API
+PORT=3000                        # Server port (default: 3000)
 ```
 
 ## Writing Posts
@@ -49,10 +58,21 @@ tags: [blog, activitypub]
 Your content here. Supports **bold**, *italic*, `code`, and more.
 ```
 
-## Publishing to Fediverse
+## Publishing
+
+### Option 1: Web Admin Interface
+
+Visit `https://yourdomain.com/admin`
+
+- Username: `admin`
+- Password: your `ADMIN_PASSWORD`
+
+From here you can view all posts and publish with one click.
+
+### Option 2: Command Line
 
 ```bash
-# List all posts and their publish status
+# List all posts and their status
 npm run publish
 
 # Publish a specific post
@@ -62,19 +82,27 @@ npm run publish hello-world
 npm run publish --all
 ```
 
-Once published, followers on Mastodon/Misskey will see your post in their timeline.
+### Option 3: REST API
 
-## Endpoints
+```bash
+# List posts
+curl -H "Authorization: Bearer YOUR_PASSWORD" \
+  https://yourdomain.com/api/posts
 
-| Endpoint | Description |
-|----------|-------------|
-| `/` | Blog homepage |
-| `/posts/:slug` | Post page |
-| `/feed.xml` | RSS feed |
-| `/feed.json` | JSON feed |
-| `/.well-known/webfinger` | WebFinger discovery |
-| `/users/:username` | ActivityPub Actor |
-| `/inbox` | Shared inbox |
+# Create and publish a post
+curl -X POST -H "Authorization: Bearer YOUR_PASSWORD" \
+  -H "Content-Type: application/json" \
+  -d '{"slug": "my-post", "content": "---\ntitle: My Post\ndate: 2026-01-03\n---\n\nHello!", "publish": true}' \
+  https://yourdomain.com/api/posts
+
+# Publish an existing post
+curl -X POST -H "Authorization: Bearer YOUR_PASSWORD" \
+  https://yourdomain.com/api/posts/my-post/publish
+```
+
+### Option 4: Obsidian Plugin
+
+See [obsidian-plugin/README.md](obsidian-plugin/README.md) for installation and usage.
 
 ## Following This Blog
 
@@ -86,18 +114,47 @@ From Mastodon or any Fediverse app, search for:
 
 Then click Follow. New posts will appear in your timeline.
 
+## Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `/` | Blog homepage |
+| `/posts/:slug` | Post page |
+| `/feed.xml` | RSS feed |
+| `/feed.json` | JSON feed |
+| `/admin` | Admin interface (Basic Auth) |
+| `/api/posts` | API: List/create posts (Bearer Auth) |
+| `/api/posts/:slug/publish` | API: Publish post |
+| `/.well-known/webfinger` | WebFinger discovery |
+| `/users/:username` | ActivityPub Actor |
+| `/users/:username/outbox` | ActivityPub Outbox |
+| `/inbox` | Shared inbox |
+
 ## Production Deployment
 
-1. Set up HTTPS (required for ActivityPub)
-2. Configure environment variables
-3. Run with a process manager:
+See [DEPLOY.md](DEPLOY.md) for detailed Linux VPS deployment instructions.
+
+Quick overview:
 
 ```bash
+# Build for production
 npm run build
-npm start
+
+# Start with systemd (recommended)
+sudo cp federvise.service /etc/systemd/system/
+sudo systemctl enable federvise
+sudo systemctl start federvise
 ```
 
-Consider using a reverse proxy (nginx/caddy) for SSL termination.
+Requirements:
+- Node.js 20+
+- HTTPS (required for ActivityPub)
+- Reverse proxy (Nginx Proxy Manager, Caddy, etc.)
+
+## Documentation
+
+- [DEPLOY.md](DEPLOY.md) - Linux VPS deployment guide
+- [README.zh-CN.md](README.zh-CN.md) - Chinese documentation
 
 ## License
 
