@@ -109,6 +109,7 @@ actorRoutes.get('/users/:username/followers', async (c) => {
 });
 
 // Outbox 集合 - 返回已发布的文章
+// Mastodon 需要分页支持：先返回 OrderedCollection，再通过 first 获取 OrderedCollectionPage
 actorRoutes.get('/users/:username/outbox', async (c) => {
   const username = c.req.param('username');
 
@@ -118,35 +119,61 @@ actorRoutes.get('/users/:username/outbox', async (c) => {
 
   const db = await getDb();
 
-  // 获取所有已发布的文章
-  const postsResult = db.exec(`
-    SELECT slug, published_at
+  // 获取已发布文章数量
+  const countResult = db.exec(`
+    SELECT COUNT(*) as count
     FROM posts
     WHERE federated_at IS NOT NULL
-    ORDER BY published_at DESC
   `);
+  const totalItems = countResult.length > 0 ? (countResult[0].values[0][0] as number) : 0;
 
-  const orderedItems: Record<string, unknown>[] = [];
+  // 检查是否请求分页
+  const page = c.req.query('page');
 
-  if (postsResult.length > 0 && postsResult[0].values.length > 0) {
-    for (const row of postsResult[0].values) {
-      const slug = row[0] as string;
-      const post = getPost(slug);
+  if (page === 'true') {
+    // 返回 OrderedCollectionPage 包含实际内容
+    const postsResult = db.exec(`
+      SELECT slug, published_at
+      FROM posts
+      WHERE federated_at IS NOT NULL
+      ORDER BY published_at DESC
+    `);
 
-      if (post) {
-        const { note, objectId } = postToNote(post);
-        const { activity } = createActivity(note, objectId);
-        orderedItems.push(activity);
+    const orderedItems: Record<string, unknown>[] = [];
+
+    if (postsResult.length > 0 && postsResult[0].values.length > 0) {
+      for (const row of postsResult[0].values) {
+        const slug = row[0] as string;
+        const post = getPost(slug);
+
+        if (post) {
+          const { note, objectId } = postToNote(post);
+          const { activity } = createActivity(note, objectId);
+          orderedItems.push(activity);
+        }
       }
     }
+
+    const collectionPage = {
+      '@context': AP_CONTEXT,
+      id: `${config.outbox}?page=true`,
+      type: 'OrderedCollectionPage',
+      partOf: config.outbox,
+      totalItems,
+      orderedItems,
+    };
+
+    c.header('Content-Type', `${AP_CONTENT_TYPE}; charset=utf-8`);
+    return c.body(JSON.stringify(collectionPage));
   }
 
+  // 返回 OrderedCollection（不含内容，只有 first 指向分页）
   const collection = {
     '@context': AP_CONTEXT,
     id: config.outbox,
     type: 'OrderedCollection',
-    totalItems: orderedItems.length,
-    orderedItems,
+    totalItems,
+    first: `${config.outbox}?page=true`,
   };
 
   c.header('Content-Type', `${AP_CONTENT_TYPE}; charset=utf-8`);
