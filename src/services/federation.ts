@@ -50,15 +50,6 @@ export async function signedPost(url: string, body: object): Promise<boolean> {
   const bodyString = JSON.stringify(body);
   const signature = signRequest('POST', url, privateKey, config.publicKeyId, bodyString, AP_CONTENT_TYPE);
 
-  // 调试日志
-  console.log('--- Signature Debug ---');
-  console.log('URL:', url);
-  console.log('keyId:', config.publicKeyId);
-  console.log('Signature header:', signature.signature);
-  console.log('Date:', signature.date);
-  console.log('Digest:', signature.digest);
-  console.log('-----------------------');
-
   try {
     const response = await request(url, {
       method: 'POST',
@@ -74,13 +65,7 @@ export async function signedPost(url: string, body: object): Promise<boolean> {
       body: bodyString,
     });
 
-    // 读取响应体查看错误详情
-    const responseText = await response.body.text();
     console.log(`POST ${url} -> ${response.statusCode}`);
-    if (response.statusCode >= 400) {
-      console.log('Response:', responseText.substring(0, 500));
-    }
-
     return response.statusCode >= 200 && response.statusCode < 300;
   } catch (error) {
     console.error(`Error posting to ${url}:`, error);
