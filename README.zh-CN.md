@@ -11,6 +11,7 @@
 - [VPS 部署](#vps-部署)
 - [Nginx Proxy Manager 配置](#nginx-proxy-manager-配置)
 - [日常使用](#日常使用)
+- [Obsidian 插件](#obsidian-插件)
 - [更改域名](#更改域名)
 - [故障排查](#故障排查)
 - [备份与恢复](#备份与恢复)
@@ -20,9 +21,10 @@
 ## 功能特性
 
 - **Markdown 写作**：支持 frontmatter（标题、日期、标签）
-- **ActivityPub 联邦**：兼容 Mastodon、Misskey 等
-- **WebFinger 发现**：支持 `@用户名@域名` 格式搜索
-- **HTTP Signatures**：安全的请求签名
+- **ActivityPub 联邦**：兼容 Mastodon、Misskey、Pleroma 等
+- **Web 管理后台**：可视化管理和发布文章
+- **REST API**：程序化访问接口
+- **Obsidian 插件**：在 Obsidian 中写作并发布
 - **RSS/JSON Feed**：标准订阅格式
 - **深色模式**：跟随系统设置
 
@@ -58,6 +60,7 @@ DOMAIN=blog.yourdomain.com    # 你的域名（必填）
 USERNAME=blog                  # ActivityPub 用户名
 DISPLAY_NAME="我的博客"        # 显示名称
 SUMMARY="一个个人博客"         # 个人简介
+ADMIN_PASSWORD=your-secret    # 管理后台和 API 密码
 PORT=3000                      # 端口号
 ```
 
@@ -114,6 +117,7 @@ DOMAIN=blog.yourdomain.com
 USERNAME=blog
 DISPLAY_NAME="你的博客名称"
 SUMMARY="你的博客简介"
+ADMIN_PASSWORD=your-secret
 PORT=3000
 NODE_ENV=production
 ```
@@ -246,6 +250,17 @@ tags: [博客, 测试]
 
 ### 发布文章
 
+#### 方式一：Web 管理后台
+
+访问 `https://yourdomain.com/admin`
+
+- 用户名：`admin`
+- 密码：你的 `ADMIN_PASSWORD`
+
+在这里可以查看所有文章并一键发布。
+
+#### 方式二：命令行
+
 ```bash
 # 查看所有文章及发布状态
 npm run publish
@@ -256,6 +271,28 @@ npm run publish my-first-post
 # 发布所有未发布的文章
 npm run publish --all
 ```
+
+#### 方式三：REST API
+
+```bash
+# 列出文章
+curl -H "Authorization: Bearer YOUR_PASSWORD" \
+  https://yourdomain.com/api/posts
+
+# 创建并发布文章
+curl -X POST -H "Authorization: Bearer YOUR_PASSWORD" \
+  -H "Content-Type: application/json" \
+  -d '{"slug": "my-post", "content": "---\ntitle: My Post\ndate: 2026-01-03\n---\n\nHello!", "publish": true}' \
+  https://yourdomain.com/api/posts
+
+# 发布已有文章
+curl -X POST -H "Authorization: Bearer YOUR_PASSWORD" \
+  https://yourdomain.com/api/posts/my-post/publish
+```
+
+#### 方式四：Obsidian 插件
+
+详见 [obsidian-plugin/README.md](obsidian-plugin/README.md)。
 
 ### 文章状态说明
 
@@ -294,6 +331,43 @@ sudo systemctl start federvise
 # 查看实时日志
 sudo journalctl -u federvise -f
 ```
+
+---
+
+## Obsidian 插件
+
+使用 Obsidian 写作并直接发布到博客。
+
+### 安装
+
+1. 下载 `obsidian-plugin/` 目录中的 `main.js` 和 `manifest.json`
+2. 在 Obsidian 库中创建 `.obsidian/plugins/federvise-publish/` 文件夹
+3. 将文件复制到该文件夹
+4. 重启 Obsidian
+5. 在设置 → 社区插件中启用 "Federvise Publish"
+
+### 从源码构建
+
+```bash
+cd obsidian-plugin
+npm install
+npm run build
+```
+
+### 配置
+
+1. 打开 Obsidian 设置 → Federvise
+2. 填写：
+   - **API URL**: 你的博客地址（如 `https://luaner.de`）
+   - **API Token**: 你的 `ADMIN_PASSWORD`
+
+### 使用
+
+- **命令面板** (Ctrl/Cmd + P)：
+  - "Publish current note to Federvise" - 保存并发布到 Fediverse
+  - "Save current note to Federvise" - 仅保存（不推送到联邦）
+
+- **右键菜单**：右键点击 Markdown 文件 → "Publish to Federvise"
 
 ---
 
@@ -451,12 +525,12 @@ sudo systemctl start federvise
 | `/posts/:slug` | 文章详情页 |
 | `/feed.xml` | RSS 订阅 |
 | `/feed.json` | JSON Feed 订阅 |
+| `/admin` | 管理后台（Basic Auth） |
+| `/api/posts` | API：列出/创建文章（Bearer Auth） |
+| `/api/posts/:slug/publish` | API：发布文章 |
 | `/.well-known/webfinger` | WebFinger 发现 |
-| `/.well-known/nodeinfo` | 实例信息 |
 | `/users/:username` | ActivityPub Actor |
-| `/users/:username/inbox` | 用户收件箱 |
 | `/users/:username/outbox` | 用户发件箱 |
-| `/users/:username/followers` | 关注者列表 |
 | `/inbox` | 共享收件箱 |
 
 ---
