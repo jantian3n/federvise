@@ -39,7 +39,7 @@ webfingerRoutes.get('/.well-known/webfinger', (c) => {
   };
 
   c.header('Content-Type', 'application/jrd+json; charset=utf-8');
-  return c.json(response);
+  return c.body(JSON.stringify(response));
 });
 
 // Host-meta (某些实现可能需要)

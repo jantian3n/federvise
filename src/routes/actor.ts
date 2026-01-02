@@ -77,8 +77,8 @@ actorRoutes.get('/users/:username', async (c) => {
     },
   };
 
-  c.header('Content-Type', AP_CONTENT_TYPE);
-  return c.json(actor);
+  c.header('Content-Type', `${AP_CONTENT_TYPE}; charset=utf-8`);
+  return c.body(JSON.stringify(actor));
 });
 
 // Followers 集合
@@ -102,8 +102,8 @@ actorRoutes.get('/users/:username/followers', async (c) => {
     orderedItems: [],
   };
 
-  c.header('Content-Type', AP_CONTENT_TYPE);
-  return c.json(collection);
+  c.header('Content-Type', `${AP_CONTENT_TYPE}; charset=utf-8`);
+  return c.body(JSON.stringify(collection));
 });
 
 // Outbox 集合
@@ -127,6 +127,6 @@ actorRoutes.get('/users/:username/outbox', async (c) => {
     orderedItems: [],
   };
 
-  c.header('Content-Type', AP_CONTENT_TYPE);
-  return c.json(collection);
+  c.header('Content-Type', `${AP_CONTENT_TYPE}; charset=utf-8`);
+  return c.body(JSON.stringify(collection));
 });
