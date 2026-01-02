@@ -1,0 +1,10 @@
+{
+  "id": "federvise-publish",
+  "name": "Federvise Publish",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Publish notes to your Federvise blog",
+  "author": "Federvise",
+  "authorUrl": "https://github.com/jantian3n/federvise",
+  "isDesktopOnly": false
+}
