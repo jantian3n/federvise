@@ -26,23 +26,9 @@ npm -v
 ## 第二步：部署代码
 
 ```bash
-# 创建目录
-sudo mkdir -p /var/www/federvise
-sudo chown $USER:$USER /var/www/federvise
-
-# 方式1: 直接上传（推荐）
-# 在本地打包后上传
-# 本地执行:
-tar -czvf federvise.tar.gz --exclude=node_modules --exclude=.git .
-scp federvise.tar.gz user@your-server:/var/www/federvise/
-
-# 服务器执行:
+# 克隆仓库
+git clone https://github.com/jantian3n/federvise.git /var/www/federvise
 cd /var/www/federvise
-tar -xzvf federvise.tar.gz
-rm federvise.tar.gz
-
-# 方式2: Git clone (如果你推送到了 GitHub)
-# git clone https://github.com/yourname/federvise.git /var/www/federvise
 ```
 
 ---
