@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { config } from '../config.js';
 import { getDb } from '../db/index.js';
+import { getPost } from '../services/markdown.js';
+import { postToNote, createActivity } from '../services/publish.js';
 import { AP_CONTEXT, AP_CONTENT_TYPE, acceptsActivityPub } from '../utils/activitypub.js';
 
 export const actorRoutes = new Hono();
@@ -106,7 +108,7 @@ actorRoutes.get('/users/:username/followers', async (c) => {
   return c.body(JSON.stringify(collection));
 });
 
-// Outbox 集合
+// Outbox 集合 - 返回已发布的文章
 actorRoutes.get('/users/:username/outbox', async (c) => {
   const username = c.req.param('username');
 
@@ -115,16 +117,36 @@ actorRoutes.get('/users/:username/outbox', async (c) => {
   }
 
   const db = await getDb();
-  const result = db.exec('SELECT COUNT(*) as count FROM posts WHERE federated_at IS NOT NULL');
-  const totalItems = result.length > 0 ? (result[0].values[0][0] as number) : 0;
+
+  // 获取所有已发布的文章
+  const postsResult = db.exec(`
+    SELECT slug, published_at
+    FROM posts
+    WHERE federated_at IS NOT NULL
+    ORDER BY published_at DESC
+  `);
+
+  const orderedItems: Record<string, unknown>[] = [];
+
+  if (postsResult.length > 0 && postsResult[0].values.length > 0) {
+    for (const row of postsResult[0].values) {
+      const slug = row[0] as string;
+      const post = getPost(slug);
+
+      if (post) {
+        const { note, objectId } = postToNote(post);
+        const { activity } = createActivity(note, objectId);
+        orderedItems.push(activity);
+      }
+    }
+  }
 
   const collection = {
     '@context': AP_CONTEXT,
     id: config.outbox,
     type: 'OrderedCollection',
-    totalItems,
-    // 简化实现：不分页
-    orderedItems: [],
+    totalItems: orderedItems.length,
+    orderedItems,
   };
 
   c.header('Content-Type', `${AP_CONTENT_TYPE}; charset=utf-8`);
