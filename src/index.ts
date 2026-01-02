@@ -8,6 +8,7 @@ import { feedRoutes } from './routes/feed.js';
 import { webfingerRoutes } from './routes/webfinger.js';
 import { actorRoutes } from './routes/actor.js';
 import { inboxRoutes } from './routes/inbox.js';
+import { adminRoutes } from './routes/admin.js';
 
 const app = new Hono();
 
@@ -22,6 +23,9 @@ app.route('/', inboxRoutes);
 // 博客路由
 app.route('/', blogRoutes);
 app.route('/', feedRoutes);
+
+// 管理后台
+app.route('/', adminRoutes);
 
 // 健康检查
 app.get('/health', (c) => {
