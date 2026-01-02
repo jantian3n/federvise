@@ -29,7 +29,8 @@ export function signRequest(
   url: string,
   privateKey: string,
   keyId: string,
-  body?: string
+  body?: string,
+  contentType?: string
 ): SignatureHeaders {
   const urlObj = new URL(url);
   const host = urlObj.host;
@@ -46,12 +47,18 @@ export function signRequest(
 
   let digest: string | undefined;
 
-  // 如果有 body，添加 digest
+  // 如果有 body，添加 digest 和 content-type
   if (body) {
     const hash = createHash('sha256').update(body).digest('base64');
     digest = `SHA-256=${hash}`;
     headers.push('digest');
     signingParts.push(`digest: ${digest}`);
+
+    // 添加 content-type 到签名
+    if (contentType) {
+      headers.push('content-type');
+      signingParts.push(`content-type: ${contentType}`);
+    }
   }
 
   // 构建签名字符串

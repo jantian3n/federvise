@@ -48,7 +48,7 @@ export async function signedPost(url: string, body: object): Promise<boolean> {
   }
 
   const bodyString = JSON.stringify(body);
-  const signature = signRequest('POST', url, privateKey, config.publicKeyId, bodyString);
+  const signature = signRequest('POST', url, privateKey, config.publicKeyId, bodyString, AP_CONTENT_TYPE);
 
   try {
     const response = await request(url, {
