@@ -16,12 +16,18 @@ import { getDb } from './db/index.js';
 import { schema } from './db/schema.js';
 
 async function main() {
+  console.log('[Main] Starting server...');
+
   // 初始化数据库表
   const db = await getDb();
+  console.log('[Main] Database loaded');
   db.run(schema);
+  console.log('[Main] Schema executed');
 
   // 检查是否已初始化
+  console.log('[Main] Checking initialization...');
   const initialized = await isInitialized();
+  console.log('[Main] Initialization result:', initialized);
 
   if (initialized) {
     // 从数据库加载配置
@@ -32,6 +38,30 @@ async function main() {
 
   // 中间件
   app.use('*', logger());
+
+  // 健康检查（始终可用）
+  app.get('/health', (c) => {
+    return c.json({ status: 'ok', initialized });
+  });
+
+  // 调试端点 - 查看数据库状态（始终可用）
+  app.get('/debug/db', async (c) => {
+    const db = await getDb();
+    const tables = db.exec(`SELECT name FROM sqlite_master WHERE type='table'`);
+    const siteConfig = db.exec(`SELECT * FROM site_config`);
+    const credentials = db.exec(`SELECT id, totp_enabled, created_at FROM credentials`);
+    const sessions = db.exec(`SELECT id, created_at, expires_at FROM sessions`);
+    const users = db.exec(`SELECT id, username, display_name FROM users`);
+
+    return c.json({
+      tables: tables.length > 0 ? tables[0].values : [],
+      site_config: siteConfig.length > 0 ? siteConfig[0].values : [],
+      credentials: credentials.length > 0 ? credentials[0].values : [],
+      sessions: sessions.length > 0 ? sessions[0].values : [],
+      users: users.length > 0 ? users[0].values : [],
+      initialized_check: await isInitialized(),
+    });
+  });
 
   if (!initialized) {
     // 未初始化：只挂载 setup 路由
@@ -66,11 +96,6 @@ async function main() {
     // 管理后台
     app.route('/', adminRoutes);
   }
-
-  // 健康检查
-  app.get('/health', (c) => {
-    return c.json({ status: 'ok', initialized });
-  });
 
   // 启动服务器
   console.log(`Starting server on port ${config.port}...`);

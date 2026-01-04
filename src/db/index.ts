@@ -9,15 +9,25 @@ const dbPath = path.join(__dirname, '../../data/blog.db');
 let db: Database | null = null;
 
 export async function getDb(): Promise<Database> {
-  if (db) return db;
+  if (db) {
+    console.log('[DB] Returning cached database instance');
+    return db;
+  }
+
+  console.log('[DB] Creating new database instance');
+  console.log('[DB] Database path:', dbPath);
+  console.log('[DB] Database file exists:', fs.existsSync(dbPath));
 
   const SQL = await initSqlJs();
 
   // 尝试加载现有数据库
   if (fs.existsSync(dbPath)) {
+    console.log('[DB] Loading existing database from file');
     const buffer = fs.readFileSync(dbPath);
+    console.log('[DB] Database file size:', buffer.length, 'bytes');
     db = new SQL.Database(buffer);
   } else {
+    console.log('[DB] Creating new in-memory database');
     db = new SQL.Database();
   }
 

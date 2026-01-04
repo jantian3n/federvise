@@ -33,7 +33,12 @@ const setupState: {
 
 // 步骤 1: 站点信息
 setupRoutes.get('/setup', async (c) => {
-  if (await isInitialized()) {
+  console.log('[Setup] GET /setup - checking initialization...');
+  const initialized = await isInitialized();
+  console.log('[Setup] GET /setup - initialized:', initialized);
+
+  if (initialized) {
+    console.log('[Setup] GET /setup - redirecting to /');
     return c.redirect('/');
   }
 

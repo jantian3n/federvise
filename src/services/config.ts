@@ -23,19 +23,22 @@ const defaults: SiteConfig = {
  * 获取单个配置项
  */
 export async function getConfigValue(key: string): Promise<string | null> {
-  const db = await getDb();
-  // sql.js exec 不支持参数化查询，需要用 prepare
-  const stmt = db.prepare(`SELECT value FROM site_config WHERE key = $key`);
-  stmt.bind({ $key: key });
+  try {
+    const db = await getDb();
+    // 使用 exec 直接查询，手动转义单引号
+    const safeKey = key.replace(/'/g, "''");
+    const result = db.exec(`SELECT value FROM site_config WHERE key = '${safeKey}'`);
 
-  if (stmt.step()) {
-    const value = stmt.get()[0] as string;
-    stmt.free();
-    return value;
+    console.log(`[Config] getConfigValue('${key}'):`, result.length > 0 ? result[0].values : 'no results');
+
+    if (result.length === 0 || result[0].values.length === 0) {
+      return null;
+    }
+    return result[0].values[0][0] as string;
+  } catch (error) {
+    console.error(`[Config] getConfigValue error for key '${key}':`, error);
+    return null;
   }
-
-  stmt.free();
-  return null;
 }
 
 /**
@@ -55,6 +58,7 @@ export async function setConfigValue(key: string, value: string): Promise<void> 
  */
 export async function isInitialized(): Promise<boolean> {
   const initialized = await getConfigValue('initialized_at');
+  console.log(`[Config] isInitialized() = ${initialized !== null} (value: ${initialized})`);
   return initialized !== null;
 }
 
