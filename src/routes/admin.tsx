@@ -212,16 +212,19 @@ adminRoutes.post('/api/publish-all', apiAuth, async (c) => {
 adminRoutes.post('/api/notes', apiAuth, async (c) => {
   try {
     let content: string;
-    let tags: string[] = ['note'];
+    let title: string | undefined;
+    let tags: string[] = [];
 
     const contentType = c.req.header('Content-Type') || '';
     if (contentType.includes('application/json')) {
       const body = await c.req.json();
       content = body.content;
+      title = body.title;
       if (body.tags) tags = body.tags;
     } else {
       const body = await c.req.parseBody();
       content = body.content as string;
+      title = (body.title as string)?.trim() || undefined;
     }
 
     if (!content || content.trim().length === 0) {
@@ -234,21 +237,24 @@ adminRoutes.post('/api/notes', apiAuth, async (c) => {
 
     const now = new Date();
     const timestamp = now.toISOString().replace(/[-T:\.Z]/g, '').slice(0, 14);
-    const slug = `note-${timestamp}`;
 
-    const title = content.slice(0, 50) + (content.length > 50 ? '...' : '');
+    // 有标题 → 普通文章，无标题 → 笔记
+    const isNote = !title;
+    const slug = isNote ? `note-${timestamp}` : `post-${timestamp}`;
+    const finalTitle = title || 'Note'; // 笔记使用简单标题
+    const finalTags = isNote ? ['note', ...tags] : tags;
 
     const frontMatter = `---
-title: "${title.replace(/"/g, '\\"')}"
+title: "${finalTitle.replace(/"/g, '\\"')}"
 date: ${now.toISOString()}
-tags: [${tags.map(t => `"${t}"`).join(', ')}]
+tags: [${finalTags.map(t => `"${t}"`).join(', ')}]
 ---
 
 ${content}`;
 
     const filePath = join(process.cwd(), 'content', `${slug}.md`);
     writeFileSync(filePath, frontMatter, 'utf-8');
-    console.log(`Saved note: ${filePath}`);
+    console.log(`Saved ${isNote ? 'note' : 'post'}: ${filePath}`);
 
     const publishResult = await publishPost(slug);
 
@@ -259,6 +265,7 @@ ${content}`;
     return c.json({
       success: publishResult.success,
       slug,
+      isNote,
       message: publishResult.message,
     });
   } catch (error) {
