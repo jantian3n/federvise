@@ -26,7 +26,7 @@ async function main() {
 
   // 检查是否已初始化
   console.log('[Main] Checking initialization...');
-  const initialized = await isInitialized();
+  let initialized = await isInitialized();
   console.log('[Main] Initialization result:', initialized);
 
   if (initialized) {
@@ -40,8 +40,9 @@ async function main() {
   app.use('*', logger());
 
   // 健康检查（始终可用）
-  app.get('/health', (c) => {
-    return c.json({ status: 'ok', initialized });
+  app.get('/health', async (c) => {
+    const currentlyInitialized = await isInitialized();
+    return c.json({ status: 'ok', initialized: currentlyInitialized });
   });
 
   // 调试端点 - 查看数据库状态（始终可用）
@@ -63,39 +64,51 @@ async function main() {
     });
   });
 
-  if (!initialized) {
-    // 未初始化：只挂载 setup 路由
-    app.route('/', setupRoutes);
+  // Setup 路由（始终挂载）
+  app.route('/', setupRoutes);
 
-    // 其他所有路由重定向到 /setup
-    app.all('*', (c) => {
-      const path = c.req.path;
-      if (!path.startsWith('/setup')) {
-        return c.redirect('/setup');
-      }
-      return c.notFound();
-    });
-  } else {
-    // 已初始化：挂载所有路由
+  // 动态初始化检查中间件
+  // 如果未初始化，重定向非 setup 路由到 /setup
+  app.use('*', async (c, next) => {
+    const path = c.req.path;
 
-    // Setup 路由（已初始化时会重定向到首页）
-    app.route('/', setupRoutes);
+    // 跳过 setup、health、debug 路由
+    if (path.startsWith('/setup') || path === '/health' || path.startsWith('/debug')) {
+      return next();
+    }
 
-    // 认证路由
-    app.route('/', authRoutes);
+    // 动态检查初始化状态
+    const currentlyInitialized = await isInitialized();
 
-    // ActivityPub 路由（优先级高）
-    app.route('/', webfingerRoutes);
-    app.route('/', actorRoutes);
-    app.route('/', inboxRoutes);
+    if (!currentlyInitialized) {
+      console.log(`[Middleware] Not initialized, redirecting ${path} to /setup`);
+      return c.redirect('/setup');
+    }
 
-    // 博客路由
-    app.route('/', blogRoutes);
-    app.route('/', feedRoutes);
+    // 如果刚初始化但配置未加载，重新加载
+    if (currentlyInitialized && !initialized) {
+      console.log('[Middleware] Newly initialized, reloading config...');
+      await loadConfigFromDb();
+      initialized = true; // 更新状态
+    }
 
-    // 管理后台
-    app.route('/', adminRoutes);
-  }
+    return next();
+  });
+
+  // 认证路由
+  app.route('/', authRoutes);
+
+  // ActivityPub 路由
+  app.route('/', webfingerRoutes);
+  app.route('/', actorRoutes);
+  app.route('/', inboxRoutes);
+
+  // 博客路由
+  app.route('/', blogRoutes);
+  app.route('/', feedRoutes);
+
+  // 管理后台
+  app.route('/', adminRoutes);
 
   // 启动服务器
   console.log(`Starting server on port ${config.port}...`);
