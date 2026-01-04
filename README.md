@@ -1,161 +1,173 @@
 # Federvise
 
-A single-user ActivityPub-enabled blog. Write in Markdown, publish to the Fediverse.
+一个单用户 ActivityPub 博客系统。用 Markdown 写作，发布到 Fediverse 联邦宇宙。
 
-## Features
+## 特性
 
-- **Markdown-based content** with YAML frontmatter support
-- **ActivityPub federation** compatible with Mastodon, Misskey, Pleroma, etc.
-- **Web admin interface** for managing and publishing posts
-- **REST API** for programmatic access
-- **Obsidian plugin** for writing and publishing from Obsidian
-- **RSS/JSON Feed** for traditional subscribers
-- **Dark mode** following system preference
+- **初始化向导** - 首次部署时通过网页完成配置，无需手动编辑配置文件
+- **双因素认证** - 使用 TOTP 验证码登录，支持 Google Authenticator 等应用
+- **快捷发布** - 首页直接发布内容，类似 Twitter/Mastodon 体验
+- **互动显示** - 自动收取并显示来自 Fediverse 的评论、点赞、转发
+- **Markdown 写作** - 支持 YAML frontmatter 的 Markdown 文件
+- **ActivityPub 联邦** - 兼容 Mastodon、Misskey、Pleroma 等
+- **REST API** - 支持程序化访问
+- **RSS/JSON Feed** - 传统订阅方式
+- **暗色模式** - 跟随系统偏好自动切换
 
-## Quick Start
+## 快速开始
 
 ```bash
-# Clone the repository
+# 克隆仓库
 git clone https://github.com/jantian3n/federvise.git
 cd federvise
 
-# Install dependencies
+# 安装依赖
 npm install
 
-# Initialize database (generates RSA keys)
-npm run db:init
+# 构建项目
+npm run build
 
-# Start development server
-npm run dev
+# 启动服务
+npm start
 
-# Visit http://localhost:3000
+# 访问 http://localhost:3000/setup 完成初始化
 ```
 
-## Configuration
+## 初始化向导
 
-Create a `.env` file or set environment variables:
+首次访问时会自动跳转到初始化向导：
 
-```bash
-DOMAIN=yourdomain.com           # Your domain (required)
-USERNAME=blog                    # ActivityPub username
-DISPLAY_NAME="My Blog"           # Display name
-SUMMARY="A personal blog"        # Bio/description
-ADMIN_PASSWORD=your-secret       # Password for admin and API
-PORT=3000                        # Server port (default: 3000)
-```
+1. **站点信息** - 设置域名、用户名、显示名称、简介
+2. **设置密码** - 创建管理员密码（至少 8 位）
+3. **启用 2FA** - 扫描二维码，绑定 TOTP 验证器
 
-## Writing Posts
+完成后自动登录，配置保存在数据库中。
 
-Add Markdown files to the `content/` directory:
+## 写作与发布
+
+### 方式一：网页快捷发布
+
+登录后首页顶部会显示发布框：
+
+- **只填内容** → 创建笔记（类似推文）
+- **填写标题 + 内容** → 创建文章
+
+发布后自动推送到所有关注者。
+
+### 方式二：Markdown 文件
+
+在 `content/` 目录创建 Markdown 文件：
 
 ```markdown
 ---
-title: My First Post
+title: 我的第一篇文章
 date: 2026-01-02
-tags: [blog, activitypub]
+tags: [博客, ActivityPub]
 ---
 
-Your content here. Supports **bold**, *italic*, `code`, and more.
+这里是正文内容。支持 **粗体**、*斜体*、`代码` 等格式。
 ```
 
-## Publishing
-
-### Option 1: Web Admin Interface
-
-Visit `https://yourdomain.com/admin`
-
-- Username: `admin`
-- Password: your `ADMIN_PASSWORD`
-
-From here you can view all posts and publish with one click.
-
-### Option 2: Command Line
+然后通过管理后台或命令行发布：
 
 ```bash
-# List all posts and their status
+# 查看所有文章
 npm run publish
 
-# Publish a specific post
+# 发布指定文章
 npm run publish hello-world
 
-# Publish all unpublished posts
+# 发布所有未发布的文章
 npm run publish --all
 ```
 
-### Option 3: REST API
+### 方式三：REST API
 
 ```bash
-# List posts
-curl -H "Authorization: Bearer YOUR_PASSWORD" \
-  https://yourdomain.com/api/posts
-
-# Create and publish a post
-curl -X POST -H "Authorization: Bearer YOUR_PASSWORD" \
+# 创建并发布文章
+curl -X POST -H "Authorization: Bearer 你的密码" \
   -H "Content-Type: application/json" \
-  -d '{"slug": "my-post", "content": "---\ntitle: My Post\ndate: 2026-01-03\n---\n\nHello!", "publish": true}' \
-  https://yourdomain.com/api/posts
+  -d '{"slug": "my-post", "content": "---\ntitle: 标题\ndate: 2026-01-03\n---\n\n内容", "publish": true}' \
+  https://你的域名/api/posts
 
-# Publish an existing post
-curl -X POST -H "Authorization: Bearer YOUR_PASSWORD" \
-  https://yourdomain.com/api/posts/my-post/publish
+# 快捷发布笔记
+curl -X POST -H "Authorization: Bearer 你的密码" \
+  -H "Content-Type: application/json" \
+  -d '{"content": "这是一条快捷笔记"}' \
+  https://你的域名/api/notes
 ```
 
-### Option 4: Obsidian Plugin
+## 互动功能
 
-See [obsidian-plugin/README.md](obsidian-plugin/README.md) for installation and usage.
+当 Fediverse 用户与你的帖子互动时：
 
-## Following This Blog
+| 互动类型 | 显示效果 |
+|---------|---------|
+| 评论/回复 | 显示评论者头像、用户名、内容 |
+| 点赞 | 显示点赞者头像列表 |
+| 转发/Boost | 显示转发者头像列表 |
 
-From Mastodon or any Fediverse app, search for:
+首页显示互动计数：`💬 3  ❤️ 5  🔁 2`
+
+文章详情页显示完整互动列表。
+
+## 关注此博客
+
+在 Mastodon 或其他 Fediverse 应用中搜索：
 
 ```
-@blog@yourdomain.com
+@你的用户名@你的域名
 ```
 
-Then click Follow. New posts will appear in your timeline.
+点击关注，新文章会自动出现在时间线。
 
-## Endpoints
+## 端点列表
 
-| Endpoint | Description |
-|----------|-------------|
-| `/` | Blog homepage |
-| `/posts/:slug` | Post page |
-| `/feed.xml` | RSS feed |
-| `/feed.json` | JSON feed |
-| `/admin` | Admin interface (Basic Auth) |
-| `/api/posts` | API: List/create posts (Bearer Auth) |
-| `/api/posts/:slug/publish` | API: Publish post |
-| `/.well-known/webfinger` | WebFinger discovery |
+| 端点 | 说明 |
+|------|------|
+| `/` | 博客首页 |
+| `/posts/:slug` | 文章详情页 |
+| `/feed.xml` | RSS 订阅 |
+| `/feed.json` | JSON Feed |
+| `/login` | 登录页面 |
+| `/admin` | 管理后台 |
+| `/api/posts` | API: 文章列表/创建 |
+| `/api/posts/:slug/publish` | API: 发布文章 |
+| `/api/notes` | API: 快捷发布笔记 |
+| `/.well-known/webfinger` | WebFinger 发现 |
 | `/users/:username` | ActivityPub Actor |
-| `/users/:username/outbox` | ActivityPub Outbox |
-| `/inbox` | Shared inbox |
+| `/inbox` | ActivityPub 收件箱 |
+| `/health` | 健康检查 |
 
-## Production Deployment
+## 生产部署
 
-See [DEPLOY.md](DEPLOY.md) for detailed Linux VPS deployment instructions.
+详见 [DEPLOY.md](DEPLOY.md)。
 
-Quick overview:
+基本步骤：
 
 ```bash
-# Build for production
+# 构建
 npm run build
 
-# Start with systemd (recommended)
+# 使用 systemd 管理服务
 sudo cp federvise.service /etc/systemd/system/
 sudo systemctl enable federvise
 sudo systemctl start federvise
 ```
 
-Requirements:
+要求：
 - Node.js 20+
-- HTTPS (required for ActivityPub)
-- Reverse proxy (Nginx Proxy Manager, Caddy, etc.)
+- HTTPS（ActivityPub 必需）
+- 反向代理（Nginx Proxy Manager、Caddy 等）
 
-## Documentation
+## 技术栈
 
-- [DEPLOY.md](DEPLOY.md) - Linux VPS deployment guide
-- [README.zh-CN.md](README.zh-CN.md) - Chinese documentation
+- **运行时**: Node.js + TypeScript
+- **框架**: Hono
+- **数据库**: SQLite (sql.js)
+- **认证**: bcrypt + TOTP (otplib)
+- **协议**: ActivityPub / WebFinger
 
-## License
+## 许可证
 
 MIT
