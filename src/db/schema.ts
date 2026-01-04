@@ -72,4 +72,26 @@ CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug);
 CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(type);
 CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
+
+-- 互动表（评论、点赞、转发）
+CREATE TABLE IF NOT EXISTS interactions (
+  id INTEGER PRIMARY KEY,
+  type TEXT NOT NULL CHECK (type IN ('reply', 'like', 'announce')),
+  post_slug TEXT NOT NULL,
+  post_object_id TEXT,
+  actor_id TEXT NOT NULL,
+  actor_name TEXT,
+  actor_username TEXT,
+  actor_avatar TEXT,
+  content TEXT,
+  content_html TEXT,
+  activity_id TEXT UNIQUE,
+  object_id TEXT,
+  in_reply_to TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_interactions_post ON interactions(post_slug);
+CREATE INDEX IF NOT EXISTS idx_interactions_type ON interactions(type);
+CREATE INDEX IF NOT EXISTS idx_interactions_activity ON interactions(activity_id);
 `;

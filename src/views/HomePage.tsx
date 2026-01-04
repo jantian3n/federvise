@@ -1,5 +1,6 @@
 import type { FC } from 'hono/jsx';
 import type { PostMeta } from '../services/markdown.js';
+import type { InteractionCounts } from '../services/interactions.js';
 import { Layout } from './Layout.js';
 import { QuickPublish } from './QuickPublish.js';
 
@@ -12,7 +13,31 @@ function isNote(post: PostMeta): boolean {
   return post.tags.includes('note') || post.slug.startsWith('note-');
 }
 
-export const HomePage: FC<{ posts: PostMeta[]; isLoggedIn?: boolean }> = ({ posts, isLoggedIn }) => {
+// 互动统计显示组件
+const InteractionStats: FC<{ counts: InteractionCounts; slug: string }> = ({ counts, slug }) => {
+  const hasInteractions = counts.replies > 0 || counts.likes > 0 || counts.announces > 0;
+  if (!hasInteractions) return null;
+
+  return (
+    <div style="display: flex; gap: 1rem; font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem;">
+      {counts.replies > 0 && <span>💬 {counts.replies}</span>}
+      {counts.likes > 0 && <span>❤️ {counts.likes}</span>}
+      {counts.announces > 0 && <span>🔁 {counts.announces}</span>}
+    </div>
+  );
+};
+
+interface HomePageProps {
+  posts: PostMeta[];
+  isLoggedIn?: boolean;
+  interactionCounts?: Map<string, InteractionCounts>;
+}
+
+export const HomePage: FC<HomePageProps> = ({ posts, isLoggedIn, interactionCounts }) => {
+  const getCounts = (slug: string): InteractionCounts => {
+    return interactionCounts?.get(slug) || { replies: 0, likes: 0, announces: 0 };
+  };
+
   return (
     <Layout isLoggedIn={isLoggedIn}>
       {isLoggedIn && <QuickPublish />}
@@ -32,6 +57,7 @@ export const HomePage: FC<{ posts: PostMeta[]; isLoggedIn?: boolean }> = ({ post
                     </time>
                     <a href={`/posts/${post.slug}`} style="color: var(--text-secondary);">View →</a>
                   </div>
+                  <InteractionStats counts={getCounts(post.slug)} slug={post.slug} />
                 </>
               ) : (
                 // 普通文章：显示标题 + 摘要
@@ -44,6 +70,7 @@ export const HomePage: FC<{ posts: PostMeta[]; isLoggedIn?: boolean }> = ({ post
                     </div>
                   )}
                   <p>{post.excerpt}</p>
+                  <InteractionStats counts={getCounts(post.slug)} slug={post.slug} />
                 </>
               )}
             </article>

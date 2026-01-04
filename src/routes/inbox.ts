@@ -1,6 +1,12 @@
 import { Hono } from 'hono';
 import { config } from '../config.js';
 import { handleFollow, handleUndo } from '../services/federation.js';
+import {
+  saveInteraction,
+  fetchActorInfo,
+  parsePostSlug,
+  deleteInteraction,
+} from '../services/interactions.js';
 
 export const inboxRoutes = new Hono();
 
@@ -20,7 +26,10 @@ inboxRoutes.post('/inbox', async (c) => {
   return handleInbox(c);
 });
 
-async function handleInbox(c: { req: { json: () => Promise<Record<string, unknown>>; header: (name: string) => string | undefined }; json: (data: unknown, status?: number) => Response }) {
+async function handleInbox(c: {
+  req: { json: () => Promise<Record<string, unknown>>; header: (name: string) => string | undefined };
+  json: (data: unknown, status?: number) => Response;
+}) {
   let activity: Record<string, unknown>;
 
   try {
@@ -30,11 +39,11 @@ async function handleInbox(c: { req: { json: () => Promise<Record<string, unknow
   }
 
   const type = activity.type as string;
-  console.log(`Inbox received: ${type} from ${activity.actor}`);
+  const actorId = activity.actor as string;
+  console.log(`Inbox received: ${type} from ${actorId}`);
 
   // TODO: 验证 HTTP Signature
   // 在生产环境中，应该验证请求的签名
-  // 这里为了简化，暂时跳过验证
 
   switch (type) {
     case 'Follow':
@@ -42,27 +51,188 @@ async function handleInbox(c: { req: { json: () => Promise<Record<string, unknow
       break;
 
     case 'Undo':
-      await handleUndo(activity);
+      await handleUndoActivity(activity);
       break;
 
     case 'Accept':
-      // 我们不需要处理 Accept（我们不会主动 Follow 别人）
-      console.log(`Received Accept from ${activity.actor}`);
+      console.log(`Received Accept from ${actorId}`);
       break;
 
     case 'Create':
-    case 'Update':
-    case 'Delete':
-    case 'Announce':
+      await handleCreate(activity);
+      break;
+
     case 'Like':
-      // 这些是别人对我们内容的互动，可以记录但不需要特别处理
-      console.log(`Received ${type} from ${activity.actor}`);
+      await handleLike(activity);
+      break;
+
+    case 'Announce':
+      await handleAnnounce(activity);
+      break;
+
+    case 'Delete':
+      console.log(`Received Delete from ${actorId}`);
+      break;
+
+    case 'Update':
+      console.log(`Received Update from ${actorId}`);
       break;
 
     default:
       console.log(`Unhandled activity type: ${type}`);
   }
 
-  // ActivityPub 规范要求返回 202 Accepted
   return c.json({ status: 'accepted' }, 202);
+}
+
+/**
+ * 处理 Create 活动（主要是回复）
+ */
+async function handleCreate(activity: Record<string, unknown>): Promise<void> {
+  const actorId = activity.actor as string;
+  const object = activity.object as Record<string, unknown>;
+
+  if (!object || typeof object !== 'object') {
+    console.log('Create activity has no valid object');
+    return;
+  }
+
+  const objectType = object.type as string;
+  if (objectType !== 'Note') {
+    console.log(`Ignoring Create for type: ${objectType}`);
+    return;
+  }
+
+  const inReplyTo = object.inReplyTo as string;
+  if (!inReplyTo) {
+    console.log('Note is not a reply, ignoring');
+    return;
+  }
+
+  // 检查是否回复的是我们的帖子
+  const postSlug = parsePostSlug(inReplyTo);
+  if (!postSlug) {
+    console.log(`Could not parse post slug from: ${inReplyTo}`);
+    return;
+  }
+
+  console.log(`Received reply to post: ${postSlug}`);
+
+  // 获取 actor 信息
+  const actorInfo = await fetchActorInfo(actorId);
+
+  // 保存回复
+  await saveInteraction({
+    type: 'reply',
+    postSlug,
+    postObjectId: inReplyTo,
+    actorId,
+    actorName: actorInfo.name || undefined,
+    actorUsername: actorInfo.username || undefined,
+    actorAvatar: actorInfo.avatar || undefined,
+    content: object.content as string,
+    contentHtml: object.content as string,
+    activityId: activity.id as string,
+    objectId: object.id as string,
+    inReplyTo,
+  });
+}
+
+/**
+ * 处理 Like 活动
+ */
+async function handleLike(activity: Record<string, unknown>): Promise<void> {
+  const actorId = activity.actor as string;
+  const objectId = typeof activity.object === 'string'
+    ? activity.object
+    : (activity.object as Record<string, unknown>)?.id as string;
+
+  if (!objectId) {
+    console.log('Like activity has no valid object');
+    return;
+  }
+
+  const postSlug = parsePostSlug(objectId);
+  if (!postSlug) {
+    console.log(`Could not parse post slug from: ${objectId}`);
+    return;
+  }
+
+  console.log(`Received like for post: ${postSlug}`);
+
+  const actorInfo = await fetchActorInfo(actorId);
+
+  await saveInteraction({
+    type: 'like',
+    postSlug,
+    postObjectId: objectId,
+    actorId,
+    actorName: actorInfo.name || undefined,
+    actorUsername: actorInfo.username || undefined,
+    actorAvatar: actorInfo.avatar || undefined,
+    activityId: activity.id as string,
+    objectId,
+  });
+}
+
+/**
+ * 处理 Announce 活动（转发/boost）
+ */
+async function handleAnnounce(activity: Record<string, unknown>): Promise<void> {
+  const actorId = activity.actor as string;
+  const objectId = typeof activity.object === 'string'
+    ? activity.object
+    : (activity.object as Record<string, unknown>)?.id as string;
+
+  if (!objectId) {
+    console.log('Announce activity has no valid object');
+    return;
+  }
+
+  const postSlug = parsePostSlug(objectId);
+  if (!postSlug) {
+    console.log(`Could not parse post slug from: ${objectId}`);
+    return;
+  }
+
+  console.log(`Received boost for post: ${postSlug}`);
+
+  const actorInfo = await fetchActorInfo(actorId);
+
+  await saveInteraction({
+    type: 'announce',
+    postSlug,
+    postObjectId: objectId,
+    actorId,
+    actorName: actorInfo.name || undefined,
+    actorUsername: actorInfo.username || undefined,
+    actorAvatar: actorInfo.avatar || undefined,
+    activityId: activity.id as string,
+    objectId,
+  });
+}
+
+/**
+ * 处理 Undo 活动
+ */
+async function handleUndoActivity(activity: Record<string, unknown>): Promise<void> {
+  const object = activity.object as Record<string, unknown>;
+
+  if (!object || typeof object !== 'object') {
+    // 可能是 Undo Follow
+    await handleUndo(activity);
+    return;
+  }
+
+  const objectType = object.type as string;
+
+  if (objectType === 'Follow') {
+    await handleUndo(activity);
+  } else if (objectType === 'Like' || objectType === 'Announce') {
+    // 撤销点赞或转发
+    const objectId = object.id as string;
+    if (objectId) {
+      await deleteInteraction(objectId);
+    }
+  }
 }
