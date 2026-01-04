@@ -41,8 +41,35 @@ CREATE TABLE IF NOT EXISTS activities (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 站点配置（替代 .env）
+CREATE TABLE IF NOT EXISTS site_config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+-- 用户凭证（登录认证）
+CREATE TABLE IF NOT EXISTS credentials (
+  id INTEGER PRIMARY KEY,
+  password_hash TEXT NOT NULL,
+  totp_secret TEXT,
+  totp_enabled INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME
+);
+
+-- 会话管理
+CREATE TABLE IF NOT EXISTS sessions (
+  id INTEGER PRIMARY KEY,
+  token TEXT NOT NULL UNIQUE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NOT NULL,
+  last_activity DATETIME
+);
+
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_followers_shared_inbox ON followers(shared_inbox);
 CREATE INDEX IF NOT EXISTS idx_posts_slug ON posts(slug);
 CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(type);
+CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
 `;

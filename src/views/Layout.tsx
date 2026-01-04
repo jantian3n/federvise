@@ -1,7 +1,7 @@
 import type { FC, PropsWithChildren } from 'hono/jsx';
 import { config } from '../config.js';
 
-export const Layout: FC<PropsWithChildren<{ title?: string }>> = ({ title, children }) => {
+export const Layout: FC<PropsWithChildren<{ title?: string; isLoggedIn?: boolean }>> = ({ title, children, isLoggedIn }) => {
   const pageTitle = title ? `${title} - ${config.displayName}` : config.displayName;
 
   return (
@@ -43,8 +43,8 @@ export const Layout: FC<PropsWithChildren<{ title?: string }>> = ({ title, child
           header { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
           header h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
           header p { color: var(--text-secondary); font-size: 0.9rem; }
-          nav { margin-top: 0.5rem; }
-          nav a { margin-right: 1rem; }
+          nav { margin-top: 0.5rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+          .nav-right { margin-left: auto; }
           main { min-height: 60vh; }
           footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: 0.85rem; }
           article { margin-bottom: 2rem; }
@@ -68,6 +68,14 @@ export const Layout: FC<PropsWithChildren<{ title?: string }>> = ({ title, child
           <nav>
             <a href="/">Home</a>
             <a href="/feed.xml">RSS</a>
+            {isLoggedIn && <a href="/admin">Admin</a>}
+            <span class="nav-right">
+              {isLoggedIn ? (
+                <a href="/logout">Logout</a>
+              ) : (
+                <a href="/login">Login</a>
+              )}
+            </span>
           </nav>
         </header>
         <main>

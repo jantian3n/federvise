@@ -8,9 +8,9 @@ function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
-export const PostPage: FC<{ post: Post }> = ({ post }) => {
+export const PostPage: FC<{ post: Post; isLoggedIn?: boolean }> = ({ post, isLoggedIn }) => {
   return (
-    <Layout title={post.title}>
+    <Layout title={post.title} isLoggedIn={isLoggedIn}>
       <article>
         <header>
           <h1>{post.title}</h1>

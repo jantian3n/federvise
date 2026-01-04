@@ -1,14 +1,16 @@
 import type { FC } from 'hono/jsx';
 import type { PostMeta } from '../services/markdown.js';
 import { Layout } from './Layout.js';
+import { QuickPublish } from './QuickPublish.js';
 
 function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
-export const HomePage: FC<{ posts: PostMeta[] }> = ({ posts }) => {
+export const HomePage: FC<{ posts: PostMeta[]; isLoggedIn?: boolean }> = ({ posts, isLoggedIn }) => {
   return (
-    <Layout>
+    <Layout isLoggedIn={isLoggedIn}>
+      {isLoggedIn && <QuickPublish />}
       <section>
         {posts.length === 0 ? (
           <p>No posts yet.</p>
