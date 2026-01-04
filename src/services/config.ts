@@ -24,13 +24,18 @@ const defaults: SiteConfig = {
  */
 export async function getConfigValue(key: string): Promise<string | null> {
   const db = await getDb();
-  const result = db.exec(`SELECT value FROM site_config WHERE key = ?`, [key]);
+  // sql.js exec 不支持参数化查询，需要用 prepare
+  const stmt = db.prepare(`SELECT value FROM site_config WHERE key = $key`);
+  stmt.bind({ $key: key });
 
-  if (result.length === 0 || result[0].values.length === 0) {
-    return null;
+  if (stmt.step()) {
+    const value = stmt.get()[0] as string;
+    stmt.free();
+    return value;
   }
 
-  return result[0].values[0][0] as string;
+  stmt.free();
+  return null;
 }
 
 /**
