@@ -3,7 +3,7 @@ import { config } from '../config.js';
 import { getAllPosts } from '../services/markdown.js';
 import { getUnpublishedPosts, publishPost } from '../services/publish.js';
 import { Layout } from '../views/Layout.js';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { requireAuth, apiAuth } from '../middleware/auth.js';
 
@@ -252,7 +252,12 @@ tags: [${finalTags.map(t => `"${t}"`).join(', ')}]
 
 ${content}`;
 
-    const filePath = join(process.cwd(), 'content', `${slug}.md`);
+    const contentDir = join(process.cwd(), 'content');
+    if (!existsSync(contentDir)) {
+      mkdirSync(contentDir, { recursive: true });
+    }
+
+    const filePath = join(contentDir, `${slug}.md`);
     writeFileSync(filePath, frontMatter, 'utf-8');
     console.log(`Saved ${isNote ? 'note' : 'post'}: ${filePath}`);
 
