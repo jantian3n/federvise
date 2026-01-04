@@ -155,10 +155,20 @@ sudo systemctl enable federvise
 sudo systemctl start federvise
 ```
 
-要求：
+⚠️ **重要**：必须绑定域名！
+
+Federvise 是 ActivityPub 服务，**无法使用 IP 地址或 localhost 运行**。你需要：
+
+1. 拥有一个域名（如 `blog.example.com`）
+2. 将域名解析到你的服务器
+3. 配置 HTTPS 证书（Let's Encrypt 等）
+4. 设置反向代理（Nginx、Caddy 等）
+
+其他要求：
 - Node.js 20+
-- HTTPS（ActivityPub 必需）
 - 反向代理（Nginx Proxy Manager、Caddy 等）
+
+> 注意：不支持 Cloudflare Pages、Vercel 等无服务器平台，因为需要持久化存储和文件系统。
 
 ## 技术栈
 
