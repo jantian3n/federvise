@@ -82,6 +82,11 @@ export function getAllPosts(): PostMeta[] {
     };
   }).filter((p): p is PostMeta => p !== null);
 
-  // 按日期倒序排列
-  return posts.sort((a, b) => b.date.getTime() - a.date.getTime());
+  // 按日期倒序排列，日期相同时按 slug 倒序（确保排序稳定）
+  return posts.sort((a, b) => {
+    const dateDiff = b.date.getTime() - a.date.getTime();
+    if (dateDiff !== 0) return dateDiff;
+    // 日期相同时，按 slug 倒序（新的 slug 如 note-20260104... 排在前面）
+    return b.slug.localeCompare(a.slug);
+  });
 }
