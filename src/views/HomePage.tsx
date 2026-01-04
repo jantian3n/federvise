@@ -7,6 +7,11 @@ function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
+// 判断是否为笔记（快捷发布的短内容）
+function isNote(post: PostMeta): boolean {
+  return post.tags.includes('note') || post.slug.startsWith('note-');
+}
+
 export const HomePage: FC<{ posts: PostMeta[]; isLoggedIn?: boolean }> = ({ posts, isLoggedIn }) => {
   return (
     <Layout isLoggedIn={isLoggedIn}>
@@ -17,14 +22,30 @@ export const HomePage: FC<{ posts: PostMeta[]; isLoggedIn?: boolean }> = ({ post
         ) : (
           posts.map(post => (
             <article key={post.slug}>
-              <h2><a href={`/posts/${post.slug}`}>{post.title}</a></h2>
-              <time datetime={post.date.toISOString()}>{formatDate(post.date)}</time>
-              {post.tags.length > 0 && (
-                <div class="tags">
-                  {post.tags.map(tag => <span class="tag" key={tag}>{tag}</span>)}
-                </div>
+              {isNote(post) ? (
+                // 笔记：直接显示内容，不显示标题
+                <>
+                  <p style="margin-bottom: 0.5rem;">{post.excerpt}</p>
+                  <div style="display: flex; gap: 1rem; align-items: center; font-size: 0.875rem;">
+                    <time datetime={post.date.toISOString()} style="color: var(--text-secondary);">
+                      {formatDate(post.date)}
+                    </time>
+                    <a href={`/posts/${post.slug}`} style="color: var(--text-secondary);">View →</a>
+                  </div>
+                </>
+              ) : (
+                // 普通文章：显示标题 + 摘要
+                <>
+                  <h2><a href={`/posts/${post.slug}`}>{post.title}</a></h2>
+                  <time datetime={post.date.toISOString()}>{formatDate(post.date)}</time>
+                  {post.tags.length > 0 && (
+                    <div class="tags">
+                      {post.tags.map(tag => <span class="tag" key={tag}>{tag}</span>)}
+                    </div>
+                  )}
+                  <p>{post.excerpt}</p>
+                </>
               )}
-              <p>{post.excerpt}</p>
             </article>
           ))
         )}

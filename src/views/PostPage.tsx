@@ -8,14 +8,21 @@ function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
+// 判断是否为笔记（快捷发布的短内容）
+function isNote(post: Post): boolean {
+  return post.tags.includes('note') || post.slug.startsWith('note-');
+}
+
 export const PostPage: FC<{ post: Post; isLoggedIn?: boolean }> = ({ post, isLoggedIn }) => {
+  const noteMode = isNote(post);
+
   return (
-    <Layout title={post.title} isLoggedIn={isLoggedIn}>
+    <Layout title={noteMode ? 'Note' : post.title} isLoggedIn={isLoggedIn}>
       <article>
         <header>
-          <h1>{post.title}</h1>
+          {!noteMode && <h1>{post.title}</h1>}
           <time datetime={post.date.toISOString()}>{formatDate(post.date)}</time>
-          {post.tags.length > 0 && (
+          {post.tags.length > 0 && !noteMode && (
             <div class="tags">
               {post.tags.map(tag => <span class="tag" key={tag}>{tag}</span>)}
             </div>
